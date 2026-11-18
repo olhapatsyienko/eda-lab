@@ -1,0 +1,48 @@
+import * as cdk from "aws-cdk-lib";
+import { Construct } from "constructs";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as lambdanode from "aws-cdk-lib/aws-lambda-nodejs";
+import * as s3n from "aws-cdk-lib/aws-s3-notifications";
+import * as events from "aws-cdk-lib/aws-lambda-event-sources";
+
+export class EdaAppStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    const imagesBucket = new s3.Bucket(this, "images", {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    const queue = new sqs.Queue(this, "img-uploaded-q", {
+      receiveMessageWaitTime: cdk.Duration.seconds(6),
+    });
+
+    const processImageFn = new lambdanode.NodejsFunction(
+      this,
+      "ProcessImage",
+      {
+        runtime: lambda.Runtime.NODEJS_22_X,
+        entry: `${__dirname}/../lambdas/processImage.ts`,
+        timeout: cdk.Duration.seconds(15),
+        memorySize: 128,
+      }
+    );
+
+    imagesBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.SqsDestination(queue)
+    );
+
+    const newImageEventSource = new events.SqsEventSource(queue, {
+      batchSize: 5,
+      maxBatchingWindow: cdk.Duration.seconds(5),
+    });
+
+    processImageFn.addEventSource(newImageEventSource);
+
+    imagesBucket.grantRead(processImageFn);
+  }
+}
