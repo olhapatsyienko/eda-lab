@@ -155,3 +155,6 @@ cdk.out
 # macOS zip metadata
 __MACOSX/
 .DS_Store
+
+# Local SES sender/recipient addresses
+env.ts
