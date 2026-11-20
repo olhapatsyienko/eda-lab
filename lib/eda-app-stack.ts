@@ -2,6 +2,8 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdanode from "aws-cdk-lib/aws-lambda-nodejs";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
@@ -16,8 +18,12 @@ export class EdaAppStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    const queue = new sqs.Queue(this, "img-uploaded-q", {
+    const imageProcessQueue = new sqs.Queue(this, "img-process-q", {
       receiveMessageWaitTime: cdk.Duration.seconds(6),
+    });
+
+    const newImageTopic = new sns.Topic(this, "NewImageTopic", {
+      displayName: "New Image topic",
     });
 
     const processImageFn = new lambdanode.NodejsFunction(
@@ -33,10 +39,14 @@ export class EdaAppStack extends cdk.Stack {
 
     imagesBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
-      new s3n.SqsDestination(queue)
+      new s3n.SnsDestination(newImageTopic)
     );
 
-    const newImageEventSource = new events.SqsEventSource(queue, {
+    newImageTopic.addSubscription(
+      new subs.SqsSubscription(imageProcessQueue)
+    );
+
+    const newImageEventSource = new events.SqsEventSource(imageProcessQueue, {
       batchSize: 5,
       maxBatchingWindow: cdk.Duration.seconds(5),
     });

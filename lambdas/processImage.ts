@@ -10,11 +10,12 @@ const s3 = new S3Client();
 export const handler: SQSHandler = async (event) => {
   console.log("Event ", JSON.stringify(event));
   for (const record of event.Records) {
-    const recordBody = JSON.parse(record.body);
-    if (recordBody.Records) {
-      console.log("Record body ", JSON.stringify(recordBody));
-      for (const messageRecord of recordBody.Records) {
-        const s3e = messageRecord.s3;
+    const recordBody = JSON.parse(record.body);        // Parse SQS message
+    const snsMessage = JSON.parse(recordBody.Message); // Parse SNS message
+    console.log("Record body ", JSON.stringify(snsMessage));
+    if (snsMessage.Records) {
+      for (const s3Message of snsMessage.Records) {
+        const s3e = s3Message.s3;
         const srcBucket = s3e.bucket.name;
         const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
         let theImage = null;
