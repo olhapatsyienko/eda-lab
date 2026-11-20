@@ -151,3 +151,7 @@ vite.config.ts.timestamp-*
 # CDK
 cdk.out
 .cdk.staging
+
+# macOS zip metadata
+__MACOSX/
+.DS_Store
