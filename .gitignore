@@ -41,6 +41,10 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Local dependency manifests — do not commit
+package.json
+package-lock.json
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 

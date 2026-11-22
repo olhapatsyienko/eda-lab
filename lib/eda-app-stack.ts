@@ -20,8 +20,16 @@ export class EdaAppStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    const dlq = new sqs.Queue(this, "img-dlq", {
+      receiveMessageWaitTime: cdk.Duration.seconds(6),
+    });
+
     const imageProcessQueue = new sqs.Queue(this, "img-process-q", {
       receiveMessageWaitTime: cdk.Duration.seconds(6),
+      deadLetterQueue: {
+        queue: dlq,
+        maxReceiveCount: 1,
+      },
     });
 
     const newImageTopic = new sns.Topic(this, "NewImageTopic", {
@@ -66,6 +74,24 @@ export class EdaAppStack extends cdk.Stack {
     });
 
     persistImageDataFn.addEventSource(newImageEventSource);
+
+    const rejectedFileFn = new lambdanode.NodejsFunction(
+      this,
+      "RejectedFileFn",
+      {
+        runtime: lambda.Runtime.NODEJS_22_X,
+        entry: `${__dirname}/../lambdas/rejectedFile.ts`,
+        timeout: cdk.Duration.seconds(15),
+        memorySize: 128,
+      }
+    );
+
+    const rejectedFileEventSource = new events.SqsEventSource(dlq, {
+      batchSize: 5,
+      maxBatchingWindow: cdk.Duration.seconds(10),
+    });
+
+    rejectedFileFn.addEventSource(rejectedFileEventSource);
 
     imagesBucket.grantRead(persistImageDataFn);
 
