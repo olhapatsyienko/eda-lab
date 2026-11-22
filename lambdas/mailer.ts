@@ -61,10 +61,6 @@ function sendEmailParams({ name, email, message }: ContactDetails) {
           Charset: "UTF-8",
           Data: getHtmlContent({ name, email, message }),
         },
-        // Text: {           // For demo purposes
-        //   Charset: "UTF-8",
-        //   Data: getTextContent({ name, email, message }),
-        // },
       },
       Subject: {
         Charset: "UTF-8",
